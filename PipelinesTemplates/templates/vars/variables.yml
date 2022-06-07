@@ -1,0 +1,107 @@
+variables:
+#Infra Variables
+- name: InfraArtifacName
+  value: "InfraArtifac-$(Build.BuildNumber)" 
+
+- name: ResourceGroup
+  value: "rg-fabiogomeztraining"
+
+- name: SubscriptionId
+  value: "xxx-xxx-xxx"
+
+- name: ARMConnection
+  value: "Training_Connection-FabioGomezTraining"
+
+- name: AppName
+  value: "webapp"
+
+- name: AppServicePlanSku
+  value: "B1"
+
+- name: SQLServerName
+  value: "sql-webapp"
+
+- name: SQLServerVersion
+  value: "12.0"
+
+- name: SQLDbName
+  value: "sqldb-webapp"
+
+- name: SQLAdministratorLogin
+  value: "useradministrator" 
+
+- name: SQLAdministratorLoginPassword
+  value: "" 
+
+- name: StorageAccountName
+  value: "stwebappfgtraining"
+
+- name: KeyVaultName
+  value: "akv-webappcodec"
+
+- name: KetVaultSku
+  value: "standard"
+
+- name: EnableSoftDelete
+  value: "true"
+
+- name : EnabledForDiskEncryption
+  value: "false"
+
+- name : EnabledForTemplateDeployment
+  value: "false"
+
+- name: SecretName
+  value: "db-password"
+
+- name: SoftDeleteRetentionInDays
+  value: "90"
+
+- name: EnabledForDeployment
+  value: "false"
+
+- name: ARMConnectionObjectId
+  value: "xxx-xxx-xxx"
+
+- name: StorageAccountType
+  value: "Standard_LRS"
+
+- name: InsightsName
+  value: "insights-app"
+
+
+#Web app node variables
+- name: webAppZipName
+  value: AppNode.zip
+  
+- name: webAppArtifactName
+  value: "NodeArtifact-$(Build.BuildNumber)"
+
+- name: webAppName
+  value: 'webapp-web-fg'
+
+- name: webAppNodeVersionForTool
+  value: '14.x'
+
+- name: webAppType
+  value: 'webAppLinux'
+
+- name: webAppRuntime
+  value: 'NODE|14-lts'
+
+
+#apiapp variables
+- name: apiAppArtifactName
+  value: "NetCoreArtifact-$(Build.BuildNumber)"
+
+- name: apiAppBuildConfiguration
+  value: 'Release'
+
+- name: apiAppDotNetVersion
+  value: '3.1.x'
+
+- name: apiAppName
+  value: 'webapp-api-fg'
+
+- name: apiAppRuntime
+  value: 'DOTNETCORE|3.1'

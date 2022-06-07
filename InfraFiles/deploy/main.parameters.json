@@ -1,0 +1,78 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "webAppName": {
+            "value": "webapp"
+        },
+        "appServicePlanSku": {
+            "value": "B1" 
+        },
+        "appsProperties": {            
+            "value": [
+                {
+                    "name": "webapp-api-fg",
+                    "linuxFxVersion": "DOTNETCORE:3.1" 
+                   
+                },
+                {
+                    "name": "webapp-web-fg",
+                    "linuxFxVersion": "NODE:14-lts" 
+                    
+                }
+            	
+                
+            ]
+        },
+        "insightsName": {
+            "value": "insights-app" 
+        },
+        "SQLServerName": {
+            "value": "sql-webapp" 
+        },
+        "SQLDbName": {
+            "value": "sqldb-webapp" 
+        },
+        "sqlAdministratorLogin": {
+            "value": "useradministrator" 
+        },
+        "sqlAdministratorLoginPassword": {
+            "value": "ttsfTTfare4454*jshuuer%%" 
+        },
+        "sqlVersion": {
+            "value": "12.0"
+        },
+        "storageAccountName": {
+            "value": "stwebappfgtraining" 
+        },
+        "storageAccountType": {
+            "value": "Standard_LRS" 
+        },
+        "keyVaultName": {
+            "value": "akv-databases" 
+        },
+        "objectId": {
+            "value": "da9e86e4-3eb5-48a2-8524-1c342af2d5a3" 
+        },
+        "keysPermissions": {
+            "value": [
+                
+            ]
+        },
+        "secretsPermissions": {
+            "value": [
+                "all"
+                
+            ]
+        },
+        "ketVaultSku": {
+            "value": "standard" 
+        },
+        "enableSoftDelete": {
+            "value": false 
+        },
+        "softDeleteRetentionInDays": {
+            "value": 90
+        }
+    }
+}

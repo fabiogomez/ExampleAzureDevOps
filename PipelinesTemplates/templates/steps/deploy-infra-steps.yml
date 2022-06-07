@@ -1,0 +1,47 @@
+parameters:
+- name: 'ARMConnection'
+  type: string
+
+steps:
+- task: DownloadPipelineArtifact@2
+  inputs:
+    artifactName: '$(InfraArtifacName)'
+    targetPath: '$(Build.StagingDirectory)'
+  displayName: "Download Artifact"
+
+- task: AzurePowerShell@5
+  inputs:
+    azureSubscription:  ${{ parameters.ARMConnection }}
+    scriptType: filePath
+    scriptPath: $(Build.StagingDirectory)/deploy/validateSecretExists.ps1
+    scriptArguments: '-keyVaultName $(KeyVaultName) -keyVaultSecretName $(SecretName) '
+    azurePowerShellVersion: latestVersion
+    pwsh: true 
+  displayName: Validate Secret Exists      
+
+
+- task: AzureResourceManagerTemplateDeployment@3
+  inputs:
+    deploymentScope: 'Resource Group'
+    azureResourceManagerConnection:  ${{ parameters.ARMConnection }}
+    subscriptionId: '$(SubscriptionId)'
+    action: 'Create Or Update Resource Group'
+    resourceGroupName: '$(ResourceGroup)'
+    location: 'Central US'
+    templateLocation: 'Linked artifact'
+    csmFile: '$(Build.StagingDirectory)/deploy/main.json'
+    csmParametersFile: '$(Build.StagingDirectory)/deploy/main.parameters.json'        
+    deploymentMode: 'Incremental'
+    overrideParameters: '-webAppName $(AppName) -appServicePlanSku $(AppServicePlanSku) -insightsName $(InsightsName) -SQLServerName $(SQLServerName) -SQLDbName $(SQLDbName) -sqlAdministratorLogin $(SQLAdministratorLogin) -sqlAdministratorLoginPassword $(SQLAdministratorLoginPassword) -sqlVersion $(SQLServerVersion) - -storageAccountType $(StorageAccountType) -storageAccountName $(StorageAccountName) -keyVaultName $(KeyVaultName) -objectId $(ARMConnectionObjectId) -ketVaultSku $(KetVaultSku) -enableSoftDelete $(EnableSoftDelete) -softDeleteRetentionInDays $(SoftDeleteRetentionInDays) '
+  displayName: Deploy Infra
+
+- task: AzurePowerShell@5
+  condition: and(succeeded(), eq(variables.createSecret, 'true'))
+  inputs:
+    azureSubscription:  ${{ parameters.ARMConnection }}
+    scriptType: filePath
+    scriptPath: $(Build.StagingDirectory)/deploy/deploySecret.ps1
+    scriptArguments: '-SQLAdministratorLoginPassword "$(SQLAdministratorLoginPassword)" -keyVaultName $(KeyVaultName) -secretName $(SecretName) '
+    azurePowerShellVersion: latestVersion
+    pwsh: true 
+  displayName: Deploy Secret 

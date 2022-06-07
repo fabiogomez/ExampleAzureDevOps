@@ -1,0 +1,25 @@
+steps:
+- checkout: ApiAppRepository
+
+- task: UseDotNet@2 
+  displayName: "Use .NET Core $(apiAppDotNetVersion)"
+  inputs:
+    version: $(apiAppDotNetVersion)
+    packageType: sdk
+
+- script: dotnet build --configuration $(apiAppBuildConfiguration)
+  displayName: 'dotnet build $(apiAppBuildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: "Publish"
+  inputs:
+    command: 'publish'
+    publishWebProjects: true
+    arguments: '-r linux-x64 --configuration $(apiAppBuildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    zipAfterPublish: true
+
+- task: PublishBuildArtifacts@1
+  displayName: "Upload Artifacts"
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)' 
+    artifactName: '$(apiAppArtifactName)'

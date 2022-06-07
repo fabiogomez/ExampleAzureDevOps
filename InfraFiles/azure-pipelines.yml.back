@@ -1,0 +1,151 @@
+parameters:
+- name: "branch"
+  displayName: "Branch Name"
+  default: "master"
+  values:
+  - main
+  - master
+  - develop
+
+variables:
+- name: ArtifactName
+  value: "InfraArtifac-$(Build.BuildNumber)" 
+
+- name: ResourceGroup
+  value: "rg-fabiogomeztraining"
+
+- name: SubscriptionId
+  value: "xxx-xxx-xxx"
+
+- name: AzureResourceManagerConnection
+  value: "Training_Connection-FabioGomezTraining"
+
+- name: AppName
+  value: "webapp"
+
+- name: AppServicePlanSku
+  value: "B1"
+
+- name: SQLServerName
+  value: "sql-webapp"
+
+- name: SQLServerVersion
+  value: "12.0"
+
+- name: SQLDbName
+  value: "sqldb-webapp"
+
+- name: SQLAdministratorLogin
+  value: "useradministrator" 
+
+- name: SQLAdministratorLoginPassword
+  value: "" 
+
+- name: StorageAccountName
+  value: "stwebappfgtraining"
+
+- name: KeyVaultName
+  value: "akv-webappcodez"
+
+- name: KetVaultSku
+  value: "standard"
+
+- name: EnableSoftDelete
+  value: "true"
+
+- name : EnabledForDiskEncryption
+  value: "false"
+
+- name : EnabledForTemplateDeployment
+  value: "false"
+
+- name: SecretName
+  value: "db-password"
+
+- name: SoftDeleteRetentionInDays
+  value: "90"
+
+- name: EnabledForDeployment
+  value: "false"
+
+- name: ARMConnectionObjectId
+  value: "xxx-xxx-xxx"
+
+- name: StorageAccountType
+  value: "Standard_LRS"
+
+- name: InsightsName
+  value: "insights-app"
+
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: __default
+  jobs:
+  - job: DeployInfraestructure
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - checkout: "git://FabioGomezTraining/FabioGomezTraining@$(Build.SourceBranchName)"
+    
+    - task: CopyFiles@2
+      inputs:
+        Contents: '**/deploy/*'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+      displayName: "Copy Infra Repo"
+          
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)'
+        artifact: '$(ArtifactName)'
+      displayName: "Publish Artifact"
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        artifactName: '$(ArtifactName)'
+        targetPath: '$(Build.StagingDirectory)'
+      displayName: "Download Artifact"
+
+    - task: AzurePowerShell@5
+      inputs:
+        azureSubscription: '$(AzureResourceManagerConnection)'
+        scriptType: filePath
+        scriptPath: $(Build.StagingDirectory)/deploy/validateSecretExists.ps1
+        scriptArguments: '-keyVaultName $(KeyVaultName) -keyVaultSecretName $(SecretName) '
+        azurePowerShellVersion: latestVersion
+        pwsh: true 
+      displayName: Validate Secret Exists      
+    
+
+    - task: AzureResourceManagerTemplateDeployment@3
+      inputs:
+        deploymentScope: 'Resource Group'
+        azureResourceManagerConnection: '$(AzureResourceManagerConnection)'
+        subscriptionId: '$(SubscriptionId)'
+        action: 'Create Or Update Resource Group'
+        resourceGroupName: '$(ResourceGroup)'
+        location: 'Central US'
+        templateLocation: 'Linked artifact'
+        csmFile: '$(Build.StagingDirectory)/deploy/main.json'
+        csmParametersFile: '$(Build.StagingDirectory)/deploy/main.parameters.json'        
+        deploymentMode: 'Incremental'
+        overrideParameters: '-webAppName $(AppName) -appServicePlanSku $(AppServicePlanSku) -insightsName $(InsightsName) -SQLServerName $(SQLServerName) -SQLDbName $(SQLDbName) -sqlAdministratorLogin $(SQLAdministratorLogin) -sqlAdministratorLoginPassword $(SQLAdministratorLoginPassword) -sqlVersion $(SQLServerVersion) - -storageAccountType $(StorageAccountType) -storageAccountName $(StorageAccountName) -keyVaultName $(KeyVaultName) -objectId $(ARMConnectionObjectId) -ketVaultSku $(KetVaultSku) -enableSoftDelete $(EnableSoftDelete) -softDeleteRetentionInDays $(SoftDeleteRetentionInDays) '
+      displayName: Deploy Infra
+
+    - task: AzurePowerShell@5
+      condition: and(succeeded(), eq(variables.createSecret, 'true'))
+      inputs:
+        azureSubscription: '$(AzureResourceManagerConnection)'
+        scriptType: filePath
+        scriptPath: $(Build.StagingDirectory)/deploy/deploySecret.ps1
+        scriptArguments: '-SQLAdministratorLoginPassword "$(SQLAdministratorLoginPassword)" -keyVaultName $(KeyVaultName) -secretName $(SecretName) '
+        azurePowerShellVersion: latestVersion
+        pwsh: true 
+      displayName: Deploy Secret 
+
+    
+
+    
+
+    

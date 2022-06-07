@@ -1,0 +1,51 @@
+resources:
+  repositories:  
+  - repository: InfraRepository 
+    type: git
+    name: FabioGomezTraining
+    ref: main
+    trigger:
+        branches:
+          include:
+            - main
+  - repository: WebAppRepository 
+    type: git
+    name: HelloWorldNode
+    ref: main
+    trigger:
+        branches:
+          include:
+            - main
+  - repository: ApiAppRepository 
+    type: git
+    name: HelloWorldDotNet
+    ref: main
+    trigger:
+        branches:
+          include:
+            - main
+
+trigger:
+- main
+
+
+parameters:
+- name: brachName
+  default: main
+
+
+stages:
+- stage: Build
+  jobs:
+  - template: /templates/jobs/build-stage-jobs.yml
+    parameters:
+      brachName: ${{ parameters.brachName }}
+
+- stage: Deploy
+  jobs:
+  - template: /templates/jobs/deploy-stage-jobs.yml  
+    parameters:
+      brachName: ${{ parameters.brachName }}
+      ARMConnection: "Training_Connection-FabioGomezTraining"
+
+

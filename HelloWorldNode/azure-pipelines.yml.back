@@ -1,0 +1,94 @@
+trigger: 
+- main
+
+variables: 
+- name: zipName
+  value: AppNode.zip
+- name: artifactName
+  value: "NodeArtifact-$(Build.BuildNumber).zip"
+- name: AzureResourceManagerConnection
+  value: "Training_Connection-FabioGomezTraining"
+- name: webAppName
+  value: 'webapp-web-fg'
+- name: nodeVersionForTool
+  value: '14.x'
+- name: appType
+  value: 'webAppLinux'
+
+
+
+
+pool: 
+  vmImage: ubuntu-latest
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: Build 
+    steps:
+    - checkout: "git://FabioGomezTraining/HelloWorldNode@$(Build.SourceBranchName)"
+
+    - task: NodeTool@0
+      inputs: 
+        versionSpec: $(nodeVersionForTool)
+      displayName: "Set Node Version"
+
+    - task: Npm@1
+      inputs:
+        command: 'install'
+      displayName: "Npm install"
+
+    - task: Npm@1
+      inputs:
+        command: 'custom'
+        customCommand: 'run build --if-present'
+      displayName: "Run Build"
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+        includeRootFolder: false
+        archiveFile: '$(Build.ArtifactStagingDirectory)/$(zipName)'
+        replaceExistingArchive: true
+      displayName: "Prepare files"
+      
+    - task: PublishBuildArtifacts@1
+      inputs: 
+        PathtoPublish: $(Build.ArtifactStagingDirectory) # dist or build files
+        ArtifactName: '$(artifactName)'
+      displayName: "Create and piblish Artifact"
+
+- stage: Deploy
+  displayName: Deploy stage
+  jobs:
+  - job: Deploy
+    steps:
+      - task: DownloadPipelineArtifact@2
+        inputs:
+          artifactName: "$(ArtifactName)"
+          targetPath: "$(Build.SourcesDirectory)"
+        displayName: "Download Artifact"
+
+      - task: AzureAppServiceManage@0
+        inputs:
+          azureSubscription: '$(AzureResourceManagerConnection)'
+          Action: 'Stop Azure App Service'
+          WebAppName: '$(webAppName)'
+
+      - task: AzureRmWebAppDeployment@4
+        inputs:
+          ConnectionType: 'AzureRM'
+          azureSubscription: '$(AzureResourceManagerConnection)'
+          appType: 'webAppLinux'
+          WebAppName: '$(webAppName)'
+          packageForLinux: '$(Build.SourcesDirectory)/$(zipName)'
+          RuntimeStack: 'NODE|14-lts'
+        displayName: 'Azure Web App Deploy: nodejs '
+      
+      - task: AzureAppServiceManage@0
+        inputs:
+          azureSubscription: '$(AzureResourceManagerConnection)'
+          Action: 'Start Azure App Service'
+          WebAppName: '$(webAppName)'
+        
+

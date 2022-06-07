@@ -1,0 +1,14 @@
+steps:
+- checkout: InfraRepository
+    
+- task: CopyFiles@2
+  inputs:
+    Contents: '**/deploy/*'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+  displayName: "Copy Infra Repo"
+      
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)'
+    artifact: '$(InfraArtifacName)'
+  displayName: "Publish Artifact"

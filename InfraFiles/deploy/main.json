@@ -1,0 +1,340 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "webAppName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the web app"
+            },
+            "minLength": 2
+        },
+        "appServicePlanSku": {
+            "type": "string",
+            "allowedValues": [
+                "B1",
+                "S1"
+            ],
+            "metadata": {
+                "description": "The SKU of  App sevice plan"
+            }
+        },
+         
+        "appsProperties": {
+            "type": "Array",
+            "metadata": {
+                "description": "The name of the web app"
+            },
+            "minLength": 2
+        },
+        "insightsName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Insights component"
+            },
+            "minLength": 2
+        },         
+        "SQLServerName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the SQL server"
+            },
+            "minLength": 2
+        },
+        "SQLDbName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the SQL database"
+            },
+            "minLength": 2
+        },
+        "sqlAdministratorLogin": {
+            "type": "string",
+            "metadata": {
+                "description": "The administrator username for the server."
+            }
+        },
+        "sqlAdministratorLoginPassword": {
+            "type": "string",
+            "metadata": {
+                "description": "The administrator password for the server."
+            }
+        },
+        "sqlVersion": {
+            "type": "string",
+            "defaultValue": "12.0",
+            "allowedValues": [
+                "12.0",
+                "11.0",
+                "10.0",
+                "9.0",
+                "8.0",
+                "7.0",
+                "6.0",
+                "5.0",
+                "4.0",
+                "3.0",
+                "2.0",
+                "1.0"
+            ],
+            "metadata": {
+                "description": "The version of SQL Server to install."
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the storage account"
+            },
+            "minLength": 2
+        },
+        "storageAccountType": {
+            "type": "string",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_ZRS",
+                "Premium_LRS"
+            ],
+            "metadata": {
+                "description": "The type of storage account to create."
+            }
+        },
+        
+        "keyVaultName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Key Vault."
+            }
+        },
+       
+        "tenantId": {
+            "type": "string",
+            "defaultValue": "[subscription().tenantId]",
+            "metadata": {
+                "description": "The tenant ID of the Key Vault."
+            }
+        },
+        "objectId": {
+            "type": "string",
+            "metadata": {
+                "description": "The object ID of the Key Vault."
+            }
+        },
+        "keysPermissions": {
+            "type": "array",
+            "metadata": {
+                "description": "Specifies the permissions to keys in the vault. Valid values are: all, encrypt, decrypt, wrapKey, unwrapKey, sign, verify, get, list, create, update, import, delete, backup, restore, recover, and purge."
+            }
+        },
+        "secretsPermissions": {
+            "type": "array",       
+            "metadata": {
+                "description": "Specifies the permissions to secrets in the vault. Valid values are: all, get, list, set, delete, backup, restore, recover, and purge."
+            }
+        },
+        "ketVaultSku": {
+            "type": "string",
+            "allowedValues": [
+                "standard",
+                "premium"
+            ],
+            "metadata": {
+                "description": "The SKU of the Key Vault."
+            }
+        },
+        "enableSoftDelete": {
+            "type": "bool",
+            "metadata": {
+                "description": "Enable soft delete for the Key Vault."
+            }
+        },
+        "softDeleteRetentionInDays": {
+            "type": "int",
+            "metadata": {
+                "description": "The number of days to keep soft deleted keys before permanently deleting them."
+            }
+        }
+          
+    },
+    "functions": [],
+    "variables": {
+        "appServicePlanName": "[concat('AppServicePlan-',parameters('webAppName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('appServicePlanName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "[parameters('appServicePlanSku')]"
+            },
+            "kind": "linux",
+            "properties": {
+                "reserved": "true"
+            }
+            
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2021-02-01",
+            "name": "[parameters('appsProperties')[copyIndex()].name]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "httpsOnly": true,
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference(format('microsoft.insights/components/{0}', parameters('insightsName')), '2015-05-01').InstrumentationKey]"
+                        },
+                        {
+                            "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                            "value": "[reference(format('microsoft.insights/components/{0}', parameters('insightsName')), '2015-05-01').ConnectionString]"
+                        },
+                            {
+                            "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+                            "value": "~2"
+                        },
+                        {
+                            "name": "XDT_MicrosoftApplicationInsights_Mode",
+                            "value": "default"
+                        }
+                           
+                    ],
+                     "connectionStrings":  [
+                         
+                        //"condition": "[if(equals(parameters('appsProperties')[copyIndex()].name, variables('apiAppName')),variables('connectionStrings'),variables('nullConnectionStrings'))]",
+
+                        {
+                            "name": "BD_ConnString",
+                            "connectionString": "[concat('Server=tcp:',parameters('SQLServerName'),'.database.windows.net,1433;Initial Catalog=',parameters('SQLDbName'),';Persist Security Info=False;User ID=',parameters('sqlAdministratorLogin'),';Password=',parameters('sqlAdministratorLoginPassword'),';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]"
+                        
+                        },            
+                        {
+                            "name": "Storage_Conn",
+                            "connectionString": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccountName'),';AccountKey=',listKeys(resourceId(resourceGroup().name,'Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-04-01').keys[0].value, ';EndpointSuffix=core.windows.net')]"
+                        
+                        },
+                        {
+                            "name": "Kv_Conn",
+                            "connectionString": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), '2021-11-01-preview').vaultUri]"
+                        
+                        }
+
+                    ],
+                    "linuxFxVersion": "[parameters('appsProperties')[copyIndex()].linuxFxVersion]",
+                    "minTlsVersion": "1.2",
+                    "ftpsState": "FtpsOnly"
+                }
+            },
+            "copy": {
+                "name": "appscopy",
+                "count": "[length(parameters('appsProperties'))]"
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Insights/components', parameters('insightsName'))]",
+                "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "[resourceId('Microsoft.Sql/servers', parameters('SQLserverName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+                
+            ]
+        },
+        {
+            "type": "Microsoft.Insights/components",
+            "apiVersion": "2020-02-02",
+            "name": "[parameters('insightsName')]",
+            "location": "[resourceGroup().location]",
+            "kind": "web",
+            "properties": {
+                "Application_Type": "web",
+                "Request_Source": "rest"
+            }
+        },
+        {
+            "type": "Microsoft.Sql/servers",
+            "apiVersion": "2021-08-01-preview",
+            "name": "[parameters('SQLServerName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "administratorLogin": "[parameters('sqlAdministratorLogin')]",
+                "administratorLoginPassword": "[parameters('sqlAdministratorLoginPassword')]",
+                "version": "[parameters('sqlVersion')]"
+            }
+        },
+        {
+            "type": "Microsoft.Sql/servers/databases",
+            "apiVersion": "2021-08-01-preview",
+            "name": "[format('{0}/{1}', parameters('SQLServerName'), parameters('SQLDbName'))]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "Standard",
+                "tier": "Standard"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', parameters('SQLServerName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-06-01",
+            "name": "[parameters('storageAccountName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "[parameters('storageAccountType')]"
+            },
+            "kind": "StorageV2",
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2021-11-01-preview",
+            "name": "[parameters('keyVaultName')]",	
+            "location": "[resourceGroup().location]",            
+            "properties": {
+                "accessPolicies": [
+                    {
+                        "tenantId": "[parameters('tenantId')]",
+                        "objectId": "[parameters('objectId')]",	
+                        "permissions": {
+                            "secrets": "[parameters('secretsPermissions')]",
+                            "keys": "[parameters('keysPermissions')]"
+
+                        }
+                    }
+                ],
+                "sku": {
+                    "family": "A",
+                    "name": "[parameters('ketVaultSku')]"
+                },                
+                "enableSoftDelete":   "[parameters('enableSoftDelete')]",
+                "softDeleteRetentionInDays": "[parameters('softDeleteRetentionInDays')]",
+                "tenantId": "[parameters('tenantId')]",
+                "networkAcls": {
+                    "defaultAction": "Allow",
+                    "bypass": "AzureServices"
+                }    
+    
+            }
+        }
+        // ,
+        // {
+        //     "type": "Microsoft.KeyVault/vaults/secrets",
+        //     "apiVersion": "2021-11-01-preview",
+        //     "name": "[format('{0}/{1}', parameters('keyVaultName'), parameters('secretName'))]",
+        //     "properties": {
+        //         "value": "[parameters('secretValue')]"
+        //     },
+        //     "dependsOn": [
+        //         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+        //     ]
+        // }
+
+    ],
+    "outputs": {}
+}

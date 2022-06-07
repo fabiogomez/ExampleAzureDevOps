@@ -1,0 +1,30 @@
+parameters:
+- name: 'brachName'
+  type: string
+
+jobs:
+  - job: BuildInfra
+    pool: 
+      vmImage: ubuntu-latest
+    variables:
+    - template: /templates/vars/variables.yml
+    steps:
+    - template: /templates/steps/build-infra-steps.yml
+  
+  - job: BuildWebApp
+    pool: 
+      vmImage: ubuntu-latest
+    variables:
+    - template: /templates/vars/variables.yml
+    steps:
+    - template: /templates/steps/build-webapp-steps.yml
+  
+  - job: BuildApiApp
+    pool: 
+      vmImage: ubuntu-latest
+    variables:
+    - template: /templates/vars/variables.yml
+    steps:
+    - template: /templates/steps/build-apiapp-steps.yml
+  
+

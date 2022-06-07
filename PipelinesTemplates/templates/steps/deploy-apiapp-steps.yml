@@ -1,0 +1,37 @@
+parameters:
+- name: 'ARMConnection'
+  type: string
+
+steps:
+- task: DownloadPipelineArtifact@2
+  inputs:
+    artifactName: "$(apiAppArtifactName)"
+    targetPath: "$(Build.SourcesDirectory)"
+  displayName: "Download Artifact"
+
+- task: AzureAppServiceManage@0
+  inputs:
+    azureSubscription: ${{ parameters.ARMConnection }}
+    Action: 'Stop Azure App Service'
+    WebAppName: '$(apiAppName)'
+  displayName: 'Stop Azure App Service'
+  continueOnError: true
+
+- task: AzureRmWebAppDeployment@4
+  inputs:
+    ConnectionType: 'AzureRM'
+    azureSubscription: ${{ parameters.ARMConnection }}
+    appType: 'webAppLinux'
+    WebAppName: '$(apiAppName)'
+    packageForLinux: '$(System.DefaultWorkingDirectory)/**/*.zip'
+    RuntimeStack: $(apiAppRuntime)
+  displayName: 'Azure Web App Deploy: Dotnet '
+
+- task: AzureAppServiceManage@0
+  inputs:
+    azureSubscription: ${{ parameters.ARMConnection }}
+    Action: 'Start Azure App Service'
+    WebAppName: '$(apiAppName)'
+  displayName: 'Start Azure App Service'
+        
+

@@ -1,0 +1,86 @@
+trigger: 
+- main
+
+variables: 
+- name: artifactName
+  value: "NetCoreArtifact-$(Build.BuildNumber).zip"
+- name: buildConfiguration
+  value: 'Release'
+- name: dotNetVersion
+  value: '3.1.x'
+- name: AzureResourceManagerConnection
+  value: "Training_Connection-FabioGomezTraining"
+- name: webAppName
+  value: 'webapp-api-fg'
+- name: Runtime
+  value: 'DOTNETCORE|3.1'
+
+
+pool: 
+  vmImage: ubuntu-18.04
+
+stages:
+- stage: BuildAndPublish
+  displayName: Build and Publish stage
+  jobs:
+  - job: Build 
+    steps:
+    - checkout: "git://FabioGomezTraining/HelloWorldDotNet@$(Build.SourceBranchName)"
+
+    - task: UseDotNet@2 
+      displayName: "Use .NET Core $(dotNetVersion)"
+      inputs:
+        version: $(dotNetVersion)
+        packageType: sdk
+
+    - script: dotnet build --configuration $(buildConfiguration)
+      displayName: 'dotnet build $(buildConfiguration)'
+
+    - task: DotNetCoreCLI@2
+      displayName: "Publish"
+      inputs:
+        command: 'publish'
+        publishWebProjects: true
+        arguments: '-r linux-x64 --configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+        zipAfterPublish: true
+
+    - task: PublishBuildArtifacts@1
+      displayName: "Upload Artifacts"
+      inputs:
+        pathtoPublish: '$(Build.ArtifactStagingDirectory)' 
+        artifactName: '$(artifactName)'     
+
+- stage: Deploy
+  displayName: Deploy stage
+  jobs:
+  - job: Deploy
+    steps:
+      - task: DownloadPipelineArtifact@2
+        inputs:
+          artifactName: "$(ArtifactName)"
+          targetPath: "$(Build.SourcesDirectory)"
+        displayName: "Download Artifact"
+
+      - task: AzureAppServiceManage@0
+        inputs:
+          azureSubscription: '$(AzureResourceManagerConnection)'
+          Action: 'Stop Azure App Service'
+          WebAppName: '$(webAppName)'
+
+      - task: AzureRmWebAppDeployment@4
+        inputs:
+          ConnectionType: 'AzureRM'
+          azureSubscription: '$(AzureResourceManagerConnection)'
+          appType: 'webAppLinux'
+          WebAppName: '$(webAppName)'
+          packageForLinux: '$(System.DefaultWorkingDirectory)/**/*.zip'
+          RuntimeStack: $(Runtime)
+        displayName: 'Azure Web App Deploy: Dotnet '
+      
+      - task: AzureAppServiceManage@0
+        inputs:
+          azureSubscription: '$(AzureResourceManagerConnection)'
+          Action: 'Start Azure App Service'
+          WebAppName: '$(webAppName)'
+
+    

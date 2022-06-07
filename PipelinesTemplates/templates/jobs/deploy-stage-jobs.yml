@@ -1,0 +1,43 @@
+parameters:
+- name: 'brachName'
+  type: string
+- name: 'ARMConnection'
+  type: string
+
+jobs:
+  - job: DeployInfra
+    pool: 
+      vmImage: ubuntu-latest
+    variables:
+    - template: /templates/vars/variables.yml
+    steps:
+    - template: /templates/steps/deploy-infra-steps.yml
+      parameters:
+        ARMConnection: ${{ variables.ARMConnection }}  
+  
+  - job: DeployApiApp
+    pool: 
+      vmImage: ubuntu-latest
+    variables:
+    - template: /templates/vars/variables.yml
+    steps:
+    - template: /templates/steps/deploy-apiapp-steps.yml
+      parameters:
+        ARMConnection: ${{ variables.ARMConnection }}    
+    dependsOn: DeployInfra
+    condition: succeeded()
+    
+  - job: DeployWebApp    
+    pool: 
+      vmImage: ubuntu-latest
+    variables:
+    - template: /templates/vars/variables.yml@self
+    steps:
+    - template: /templates/steps/deploy-webapp-steps.yml@self
+      parameters:
+        ARMConnection: ${{ variables.ARMConnection }}
+    dependsOn: 
+    - DeployInfra    
+    condition: succeeded()
+  
+
